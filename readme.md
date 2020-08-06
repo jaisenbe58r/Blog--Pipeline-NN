@@ -19,6 +19,7 @@ El primer paso antes de empezar a crear o desarrollar la arquitectura de la red 
 
 ##### Descarga del dataset de ejemplo:
 
+Se procede a la descarga del Dataset _PetImages_ para servir como ejemplo en el artículo. Este dataset contiene dos categorías de animales de compañía: _Dog_-_Cat_.
 
 ```python
 data_directory = "dataset/"
@@ -42,7 +43,9 @@ _ = [os.remove(os.path.join(directory, "Cat", item)) for item in rn.choices(item
     >>> Cat  Dog
     
 
-##### Filtrado de imagenes corruptas
+##### Filtrado de imágenes corruptas
+
+Se procede a la descarga del Dataset PetImages para servir como ejemplo en el artículo. Este dataset contiene dos categorías de animales de compañía: Dog-Cat.
 
 ```python
 num_skipped = 0
@@ -64,9 +67,12 @@ for folder_name in ("Cat", "Dog"):
 print("Deleted %d images" % num_skipped)
 ```
 
-    >>> Deleted 0 images
+    >>> Deleted 1287 images
 
 ##### Resumen de los Datos del dataset
+
+Se muestra un resumen del número total de imágenes por categoría y la relación de desbalance entre las dos categorías.
+
 
 ```python
 items_cats = [item for item in os.listdir(os.path.join(directory, "Cat")) if 
@@ -84,6 +90,8 @@ print(f'Relación de desbalanceo gatos/perros: {len(items_cats)/len(items_dogs)}
     >>> Relación de desbalanceo gatos/perros: 0.613796058269066
 
 ##### Generación del Dataset 
+
+En este caso se va ha utilizar el generador _tf.data.Dataset_ de archivos de imagen en un directorio.
 
 ```python
 image_size = (204, 204)
@@ -118,6 +126,8 @@ val_ds = val_ds.prefetch(buffer_size=batch_size)
 
 ##### Visualización de los datos
 
+Se visualizan algunas de las imágenes del Dataset a partir del generador comentado en el apartado anterior:
+
 ```python
 plt.figure(figsize=(10, 6))
 for images, labels in train_ds.take(1):
@@ -133,9 +143,11 @@ for images, labels in train_ds.take(1):
 
 ## Configuración de la arquitectura end-to-end.
 
-Una vez entendidos los datos, el siguiente paso es configurar la función de entrenamiento y evaluación, que nos permita ejecutarla y ganar confianza en su inferencia a través de una serie de experimentos. en esta etapa, es muy recomendable elegir un modelo simple, el cual no ha sido modificado de ninguna manera, por ejemplo, un clasificador lineal o un red convolucional simple. Con ello, el objetivo será entrenarlo, visualizar las pérdidas y las métricas para cada epoch, predecir resultados en base a la inferencia del modelo y realizar una serie de experimentos de ablación con hipótesis explícitas en cada experimento realizado.
+Una vez entendidos los datos, el siguiente paso es configurar la función de entrenamiento y evaluación, que nos permita ejecutarla y ganar confianza en su inferencia a través de una serie de experimentos. en esta etapa, es muy recomendable elegir un modelo simple, el cual no ha sido modificado de ninguna manera, por ejemplo, un clasificador lineal o un red convolucional simple. Con ello, el objetivo será entrenarlo, visualizar las pérdidas y las métricas para cada _epoch_, predecir resultados en base a la inferencia del modelo y realizar una serie de experimentos de ablación con hipótesis explícitas en cada experimento realizado.
 
 ##### Generación red convolucional simple
+
+Se implementa la siguiente función para general la red convolucional base para las pruebas:
 
 ```python
 def make_model(input_shape, num_classes):
@@ -196,6 +208,8 @@ model.summary()
 
 ##### Función de entrenamiento
 
+A continuación se muestra la función utilizada para el entrenamiento de los modelos CNN:
+
 ```python
 EPOCHS = 5 #Parámetro general en el Pipeline de entrenamiento
 
@@ -228,7 +242,7 @@ history = model.fit(
     >>> val_loss: 0.5077 - val_accuracy: 0.7503
 
 
-##### Función de evaluación
+##### Función de visualización de los resultados de entrenamiento y evaluación.
 
 ```python
 def plot_history(history):
@@ -268,7 +282,7 @@ plot_history(history)
 
 #### Sugerencias a tener en cuenta
 
-Algunas sugerencias en este paso son:
+Llegados a este punto, se van a exponer algunas sugerencias para la mejora continua del modelo:
 
 - **Semilla aleatoria fija:** esto garantiza la repetibilidad de sus experimentos, eliminando el factor de variación y permitiendo que pueda comparar los distintos experimentos.
 
@@ -307,7 +321,7 @@ Algunas sugerencias en este paso son:
 
 - **Verificar la pérdida en la inicialización:** Verificar que su pérdida comience en un valor de inicialización correcto. 
 El objetivo de la inicialización de peso es evitar que las salidas de activación de la capa exploten o desaparezcan durante el proceso de *forward pass* de la red neuronal profunda. Si ocurre cualquiera de los dos, los gradientes de pérdida serán demasiado grandes o demasiado pequeños para fluir hacia atrás de manera beneficiosa, y la red tardará más en converger, si es que es capaz de hacerlo.
-Para conseguir una convengencia sustancialmente más rápida y una mayor precisión en los resultados, la mejor forma es inicializar los pesos con un inicializador de pesos *GlorotNormal* o *GlorotUniform*.
+Para conseguir una convergencia sustancialmente más rápida y una mayor precisión en los resultados, la mejor forma es inicializar los pesos con un inicializador de pesos *GlorotNormal* o *GlorotUniform*.
 
     ```python
     initializer_weights = tf.keras.initializers.GlorotUniform()
@@ -325,8 +339,9 @@ Para conseguir una convengencia sustancialmente más rápida y una mayor precisi
     > En este caso la relación de desequilibrio entre las dos categorias es de un *0.6* aproximadamente, por ello:
 
     ```python
+    r_imb = 0,6
     initializer_weights = tf.keras.initializers.GlorotUniform()
-    initializer_bias = tf.constant_initializer(0.6)
+    initializer_bias = tf.constant_initializer(r_imb)
     outputs = layers.Dense(units, bias_initializer = initializer_bias, 
                             kernel_initializer = initializer_weights,
                             activation = activation)(x)
@@ -343,7 +358,7 @@ Para conseguir una convengencia sustancialmente más rápida y una mayor precisi
     ```
 
 - **Independencia de los datos de entrada:** Esto se basa en hacer la prueba de entrenar la red neuronal en base a todas las entradas a cero. En este caso la red debería funcionar peor que con los datos reales del conjunto de entrenamiento. Si es así, se está validando que la red es capaz de extraer información de las entradas.
-En vez de aplicar todas las entradas a zero, se puede establecer una capa de abandono en la entrada, con una tasa/frecuencia de abandono muy alta, con lo que conseguira que practicamente todos los elementos del tensor de entrada sean igual a zero.
+En vez de aplicar todas las entradas a cero, se puede establecer una capa de abandono en la entrada, con una tasa/frecuencia de abandono muy alta, con lo que conseguira que practicamente todos los elementos del tensor de entrada sean igual a cero.
     ```python
     def make_model_zeros(input_shape, num_classes):
 
@@ -411,12 +426,15 @@ En vez de aplicar todas las entradas a zero, se puede establecer una capa de aba
 
     ![png](output_34_0.png)
 
-    > Como se puede observar, la red con una capa de abandono en la entrada no es capaz de converger y por ello no aprende. Con ello, ya que la red base si que convergue, se valida que la red es capaz de extraer información de las entradas y como consecuencia se puede decir que el modelo es dependiente de las entradas, es decir, es capaz de extraer información de las imagenes de entrada.
+    > Como se puede observar, la red con una capa de abandono en la entrada no es capaz de converger y por ello no aprende. No converge porque la métrica se queda estancada en ~0.61 qué es el ratio de desbalance, es decir, respuesta aleatoria del modelo. Tampoco se ve que la pérdida sea capaz de bajar mucho más, con un valor mayor en comparación al modelo base. Con ello, ya que la red base si que converge, se valida que la red es capaz de extraer información de las entradas y como consecuencia se puede decir que el modelo es dependiente de las entradas, es decir, es capaz de extraer información de las imágenes de entrada.
 
 
 - **Sobreajuste en un lote:** Se basa en el sobreajuste de un lote de unos poquísimos ejemplos, con el objetivo de alcanzar la pérdida más baja posible. Para ello se puede aumentar las capacidades de la red, aumentando el número de capas o filtros. El objetivo es asegurar que tanto la etiqueta como la predicción coinciden al alcanzar la pérdida mínima, si no es así, es síntoma de que hay algún error en alguna parte.
 
-    ###### _Toma de un único lote para el entrenamiento_
+    ###### Toma de un único lote para el entrenamiento
+
+    Se toma un lote a partir del generador, que servirá como lote a sobreajustar en el entrenamiento:
+
     ```python
     # Se toma un lote a partir del generador, que servirá como lote a sobreajustar en el entrenamiento:
     X_train, y_train = train_ds.as_numpy_iterator().next()
@@ -425,6 +443,8 @@ En vez de aplicar todas las entradas a zero, se puede establecer una capa de aba
         >>> ((32, 224, 224, 3), (32,))
 
     ###### Modelo y función de entrenamiento
+
+    Modelo y función de entrenamiento para el sobreajuste (overfiting) del modelo.
 
     ```python
     def make_model_overfiting(input_shape, num_classes):
@@ -488,6 +508,8 @@ En vez de aplicar todas las entradas a zero, se puede establecer una capa de aba
 
     ###### Visualización del sobreajuste de un lote
 
+    Tal como se observa en la imagen, la función de entrenamiento es capaz de sobreajustar el modelo perfectamente al lote de entrenamiento. A partir de la _epoch_ 150, se podría decir que el modelo ya ha logrado estabilizarse en el sobreajuste de los datos de entrenamiento.
+
     ```python
     acc = history_overfiting.history['accuracy']
     loss = history_overfiting.history['loss']
@@ -517,6 +539,8 @@ En vez de aplicar todas las entradas a zero, se puede establecer una capa de aba
 - **Disminución de la pérdida en el entrenamiento:** Hasta ahora se estaba trabajando con un modelo simple y liviano, con pocos parámetros y que permite verificar el correcto funcionamiento de la red. Por ello, ahora se procede a aumentar la capacidad del modelo solo un poco, y seguidamente verificar si realmente la pérdida en el entrenamiento ha bajado como se esperaba.
 
     ###### Modelo y función de entrenamiento
+
+    Para este aumento de parámetros, se va a incrementar el número de Filtros en las capas convolucionales del modelo:
 
     ```python
     def make_model_inc_params(input_shape, num_classes):
@@ -610,7 +634,9 @@ En vez de aplicar todas las entradas a zero, se puede establecer una capa de aba
     plt.show()
     ```
 
-![png](output_42_0.png)
+    Se observa como el modelo con más parámetros es capaz de generalizar mejor con los datos de validación, consiguiendo casi un 3% más de acierto que con el modelo base.
+
+    ![png](output_42_0.png)
 
 
 - **Generalización o estandarización del código:** Antes de generalizar una funcionalidad relativamente general desde cero que permita adaptarse a varios casos, se debería desarrollar una función muy específica para cada caso y asegurar que funcione correctamente, para posteriormente codificar la generalización de esta.
@@ -732,15 +758,18 @@ Algunos procedimientos a tener en cuenta serían:
         >>> Epoch 2/5
         >>> 471/471 [==============================] - 330s 701ms/step - loss: 0.3821 - accuracy: 0.8303 - 
         >>> val_loss: 0.4466 - val_accuracy: 0.7804
-        >>> Epoch 3/5
-        >>> 471/471 [==============================] - 330s 701ms/step - loss: 0.2708 - accuracy: 0.8896 - 
-        >>> val_loss: 0.2541 - val_accuracy: 0.8930
-        >>> Epoch 4/5
-        >>> 471/471 [==============================] - 331s 702ms/step - loss: 0.1772 - accuracy: 0.9306 - 
-        >>> val_loss: 0.2540 - val_accuracy: 0.8911
-        >>> Epoch 5/5
-        >>> 471/471 [==============================] - 331s 702ms/step - loss: 0.1140 - accuracy: 0.9590 - 
-        >>> val_loss: 0.5719 - val_accuracy: 0.7791
+        >>> ...
+        >>> ...
+        >>> Epoch 48/50
+        >>> 472/472 [==============================] - 156s 330ms/step - loss: 0.0044 - accuracy: 0.9990 - val_loss: 0.
+        >>> 6699 - val_accuracy: 0.8981
+        >>> Epoch 49/50
+        >>> 472/472 [==============================] - 156s 330ms/step - loss: 0.0065 - accuracy: 0.9980 - val_loss: 0.
+        >>> 3883 - val_accuracy: 0.9002
+        >>> Epoch 50/50
+        >>> 472/472 [==============================] - 156s 330ms/step - loss: 0.0272 - accuracy: 0.9894 - val_loss: 0.
+        >>> 2828 - val_accuracy: 0.9302
+
 
     ###### Visualización dinámica de las pérdidas y métricas
 
@@ -748,8 +777,7 @@ Algunos procedimientos a tener en cuenta serían:
     plot_history(history_Xception)
     ```
 
-
-![png](output_54_0.png)
+    ![png](output_54_0.png)
 
 
 ## Regularización.
@@ -926,7 +954,7 @@ En esta fase, se tiene un modelo adaptado al conjunto de datos de entrenamiento.
             optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
         )
 
-    unfreeze_model(model_pretrained)
+    unfreeze_model(model_pretrained) # Habilitar las últimas 20 capas para entrenarlas
 
     history_pretrained = model_pretrained.fit(
         train_ds, epochs=EPOCHS, callbacks=callbacks, validation_data=val_ds,
@@ -1219,6 +1247,6 @@ Una vez encontradas las mejores arquitecturas e hiperparámetros para el modelo,
 
 - **Detección temprana del entrenamiento**: Una detección pronta del entrenamiento cuando la pérdida por validación parece estar estabilizandose y sin tener la firme seguridad de haber entrado en overfitting, sólo puede ocasionar una pérdida de rendimiento notable en el modelo.
 
-## Connclusiones
+## Conclusiones
 
-Una vez llegado a este punto, se puede decir que se ha adquirido un conocimiento profundo de la tecnología, el conjunto de datos y el problema. Se ha configurad una infraestructura de entrenamiento y validación adquiriendo una gran confianza en la precisión del modelo a través de las mejoras de rendimiento comentadas.
+Una vez llegado a este punto, se puede decir que se ha adquirido un conocimiento profundo de la tecnología, el conjunto de datos y el problema. Se ha configurado una infraestructura de entrenamiento y validación adquiriendo una gran confianza en la precisión del modelo a través de las mejoras de rendimiento comentadas.
